@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Thumb Reach Map • 4×6 • 30초</title>
+    <meta name="theme-color" content="#111" />
+    <style>
+      /* Tap ring (touch indicator) */
+      .grid {
+        position: relative;
+      } /* 링 위치 계산을 위해 */
+      .tap-ring {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 28px;
+        height: 28px;
+        border: 2px solid var(--brand);
+        border-radius: 50%;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        opacity: 0.9;
+        animation: tap-ring 600ms ease-out forwards;
+      }
+      @keyframes tap-ring {
+        0% {
+          transform: translate(-50%, -50%) scale(0.6);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1.4);
+          opacity: 0;
+        }
+      }
+
+      :root {
+        --bg: #0f1115;
+        --card: #151924;
+        --muted: #8b95a7;
+        --text: #e7ecf3;
+        --brand: #73c1ff;
+        --ok: #89d185;
+        --warn: #ffb86b;
+        --bad: #ff7b7b;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Noto Sans KR, Helvetica, Arial;
+      }
+      .app {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 16px;
+        padding-bottom: 40px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 6px 0 12px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 12px;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .controls .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .controls input[type='number'],
+      .controls input[type='text'],
+      .controls select {
+        background: #0e121a;
+        color: var(--text);
+        border: 1px solid #202636;
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-size: 14px;
+      }
+      .controls .seg {
+        display: flex;
+        background: #0e121a;
+        border: 1px solid #202636;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .seg button {
+        flex: 1;
+        border: 0;
+        padding: 8px 10px;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .seg button.active {
+        background: #1a2130;
+        color: var(--text);
+      }
+      .btn {
+        border: 0;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .btn.primary {
+        background: var(--brand);
+        color: #09111a;
+      }
+      .btn.ghost {
+        background: #0e121a;
+        color: var(--text);
+        border: 1px solid #202636;
+      }
+      .btn.warn {
+        background: var(--warn);
+        color: #1a1209;
+      }
+
+      .status {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .status .pill {
+        background: #0e121a;
+        border: 1px solid #202636;
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: var(--text);
+      }
+
+      .grid-wrap {
+        margin-top: 12px;
+      }
+      .grid {
+        display: grid;
+        width: 100%;
+        aspect-ratio: 6/4;
+        gap: 6px;
+        touch-action: none;
+      }
+      .cell {
+        background: #0e121a;
+        border: 1px solid #242b3b;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #62708a;
+        user-select: none;
+      }
+      .cell.target {
+        outline: 3px solid var(--brand);
+        box-shadow: 0 0 0 3px rgba(115, 193, 255, 0.18) inset;
+        color: #cfe9ff;
+      }
+
+      .calendar {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+      }
+      .day {
+        aspect-ratio: 1/1;
+        border-radius: 6px;
+        background: #0e121a;
+        border: 1px solid #1f2636;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: #5f6c86;
+      }
+      .day.done {
+        background: linear-gradient(180deg, #17304a, #0e121a);
+        border-color: #2a3850;
+        color: #9ec9ff;
+      }
+
+      .legend {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        background: #0e121a;
+        border: 1px solid #2a2f3d;
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .table th,
+      .table td {
+        border-bottom: 1px solid #21283a;
+        padding: 6px 8px;
+        text-align: left;
+      }
+      .muted {
+        color: var(--muted);
+      }
+
+      @media (max-width: 520px) {
+        .controls {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Galaxy S21 Ultra / 모바일 최적화 */
+      html,
+      body {
+        overscroll-behavior: none;
+      }
+      .cell {
+        min-height: 56px;
+      } /* Material 권장 48dp 이상 보장 */
+      /* 세션(전체화면) 모드: 그리드만 크게 */
+      body.session .card:not(.grid-wrap) {
+        display: none;
+      }
+      body.session h1 {
+        display: none;
+      }
+      body.session .app {
+        padding: 8px;
+      }
+      body.session .grid {
+        height: calc(100dvh - 16px);
+        aspect-ratio: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <h1>Thumb Reach Map <span class="muted">• 4×6 • 30초</span></h1>
+
+      <div class="card">
+        <div class="controls">
+          <div class="field">
+            <span>손</span>
+            <div class="seg" id="handSeg">
+              <button data-hand="right" class="active">오른손</button>
+              <button data-hand="left">왼손</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>디바이스 라벨</label>
+            <input id="deviceInput" type="text" placeholder="예: iPhone13" />
+          </div>
+          <div class="field">
+            <label>그리드 (행×열)</label>
+            <div class="row">
+              <input
+                id="rows"
+                type="number"
+                value="4"
+                min="2"
+                max="10"
+                style="width: 80px"
+              />
+              <input
+                id="cols"
+                type="number"
+                value="6"
+                min="2"
+                max="12"
+                style="width: 80px"
+              />
+            </div>
+          </div>
+          <div class="field">
+            <label>세션 길이(초)</label>
+            <input id="seconds" type="number" value="30" min="10" max="120" />
+          </div>
+        </div>
+        <div class="row" style="margin-top: 10px">
+          <button class="btn primary" id="startBtn">30초 시작</button>
+          <button class="btn ghost" id="fullscreenBtn">전체화면</button>
+          <button class="btn ghost" id="stopBtn" disabled>중지</button>
+          <button class="btn ghost" id="exportSummary">요약 CSV</button>
+          <button class="btn ghost" id="exportAttempts">시도 CSV</button>
+        </div>
+        <div class="status" style="margin-top: 10px">
+          <span class="pill">⏱ <b id="timer">00:30</b></span>
+          <span class="pill">시도 <b id="trialCount">0</b></span>
+          <span class="pill">성공률 <b id="succ">0%</b></span>
+          <span class="pill">중앙값 RT <b id="rt">-</b> ms</span>
+          <span class="pill"
+            >A_TB <b id="atb">-</b> / A_LR <b id="alr">-</b></span
+          >
+          <span class="pill">F(피로) <b id="fatigue">-</b></span>
+        </div>
+      </div>
+
+      <div class="grid-wrap card">
+        <div id="grid" class="grid" aria-label="4x6 target grid"></div>
+      </div>
+
+      <div class="card" style="margin-top: 12px">
+        <div
+          class="row"
+          style="justify-content: space-between; align-items: center"
+        >
+          <div class="legend">
+            📅 달력 히트맵 (최근 42일) — 기록된 날은 파란 음영
+          </div>
+          <button class="btn ghost" id="clearBtn">로컬 데이터 초기화</button>
+        </div>
+        <div id="calendar" class="calendar" style="margin-top: 10px"></div>
+      </div>
+
+      <div class="card" style="margin-top: 12px">
+        <h3 style="margin: 0 0 8px">최근 세션</h3>
+        <table class="table" id="recentTbl">
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>시간</th>
+              <th>손</th>
+              <th>기기</th>
+              <th>성공률</th>
+              <th>RT중앙</th>
+              <th>A_TB</th>
+              <th>A_LR</th>
+              <th>F</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const $ = (sel, el = document) => el.querySelector(sel);
+        const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
+
+        // State
+        let R = 4,
+          C = 6,
+          DUR = 30; // seconds
+        let running = false,
+          attempts = [],
+          tStart = 0,
+          trialStart = 0,
+          target = [0, 0],
+          timerId = null;
+
+        // Elements
+        const gridEl = $('#grid');
+        const handSeg = $('#handSeg');
+        const deviceInput = $('#deviceInput');
+        const rowsInput = $('#rows');
+        const colsInput = $('#cols');
+        const secondsInput = $('#seconds');
+        const startBtn = $('#startBtn');
+        const stopBtn = $('#stopBtn');
+
+        const timerLab = $('#timer');
+        const trialCountLab = $('#trialCount');
+        const succLab = $('#succ');
+        const rtLab = $('#rt');
+        const atbLab = $('#atb');
+        const alrLab = $('#alr');
+        const fatigueLab = $('#fatigue');
+
+        // Utils
+        const now = () => performance.now();
+        const pad2 = (n) => n.toString().padStart(2, '0');
+        const fmtTime = (s) =>
+          `${pad2(Math.floor(s / 60))}:${pad2(Math.floor(s % 60))}`;
+        const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+        function median(arr) {
+          if (!arr.length) return NaN;
+          const a = [...arr].sort((a, b) => a - b);
+          const mid = Math.floor(a.length / 2);
+          return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+        }
+        function linSlope(y) {
+          if (y.length < 2) return NaN;
+          const x = y.map((_, i) => i + 1);
+          const n = y.length;
+          const meanX = x.reduce((a, b) => a + b, 0) / n;
+          const meanY = y.reduce((a, b) => a + b, 0) / n;
+          let num = 0,
+            den = 0;
+          for (let i = 0; i < n; i++) {
+            num += (x[i] - meanX) * (y[i] - meanY);
+            den += (x[i] - meanX) ** 2;
+          }
+          return den === 0 ? 0 : num / den;
+        }
+
+        // 화면 켜짐 유지 (Wake Lock)
+        let wakeLock = null;
+        async function lockScreen() {
+          try {
+            if ('wakeLock' in navigator) {
+              wakeLock = await navigator.wakeLock.request('screen');
+            }
+          } catch (e) {}
+        }
+        function releaseLock() {
+          try {
+            wakeLock && wakeLock.release();
+            wakeLock = null;
+          } catch (e) {}
+        }
+
+        // Build Grid
+        function buildGrid() {
+          R = clamp(parseInt(rowsInput.value || '4', 10), 2, 20);
+          C = clamp(parseInt(colsInput.value || '6', 10), 2, 24);
+          gridEl.style.gridTemplateColumns = `repeat(${C}, 1fr)`;
+          gridEl.style.aspectRatio = `${C}/${R}`;
+          gridEl.innerHTML = '';
+          for (let r = 0; r < R; r++) {
+            for (let c = 0; c < C; c++) {
+              const cell = document.createElement('div');
+              cell.className = 'cell';
+              cell.dataset.r = r;
+              cell.dataset.c = c;
+              cell.textContent = `${r + 1},${c + 1}`;
+              gridEl.appendChild(cell);
+            }
+          }
+        }
+
+        function pickTarget() {
+          const rr = Math.floor(Math.random() * R);
+          const cc = Math.floor(Math.random() * C);
+          target = [rr, cc];
+          updateTargetHighlight();
+          trialStart = now();
+        }
+
+        function updateTargetHighlight() {
+          $$('.cell', gridEl).forEach((el) => el.classList.remove('target'));
+          const t = $(
+            `.cell[data-r="${target[0]}"][data-c="${target[1]}"]`,
+            gridEl
+          );
+          if (t) t.classList.add('target');
+        }
+
+        function onGridPointer(e) {
+          if (!running) return;
+          const cell = e.target.closest('.cell');
+          if (!cell) return;
+
+          /* [변경] 터치 강도에 따라 링 세기/크기 조절 */
+          const rect = gridEl.getBoundingClientRect();
+          const ring = document.createElement('span');
+          ring.className = 'tap-ring';
+
+          // 강도 p 계산: 1) PointerEvent.pressure(0~1) → 2) 접촉면적(width*height) → 3) 기본값 0.5
+          const hasPressure = typeof e.pressure === 'number' && e.pressure > 0;
+          let p = hasPressure ? e.pressure : 0;
+          if (!hasPressure) {
+            const area = e.width && e.height ? e.width * e.height : 0; // CSS px^2
+            // S21 Ultra 기준 대략 40~900 범위를 0.1~1로 정규화
+            const norm = (area - 40) / (900 - 40);
+            p = Math.max(0.1, Math.min(1, isFinite(norm) ? norm : 0.5));
+          }
+
+          // 강도에 따른 스타일 매핑
+          const size = Math.round(22 + 18 * p); // 22~40px
+          const bw = Math.round(1 + 3 * p); // 1~4px
+          const op = (0.35 + 0.65 * p).toFixed(2); // 0.35~1.0
+
+          ring.style.width = size + 'px';
+          ring.style.height = size + 'px';
+          ring.style.borderWidth = bw + 'px';
+          ring.style.opacity = op;
+
+          ring.style.left = e.clientX - rect.left + 'px';
+          ring.style.top = e.clientY - rect.top + 'px';
+
+          gridEl.appendChild(ring);
+          setTimeout(() => ring.remove(), 650);
+          /* [변경 끝] */
+
+          const r = parseInt(cell.dataset.r, 10);
+          const c = parseInt(cell.dataset.c, 10);
+          const rt = Math.max(0, Math.round(now() - trialStart));
+          const success = r === target[0] && c === target[1] ? 1 : 0;
+          attempts.push({
+            seq: attempts.length + 1,
+            target: [...target],
+            hit: [r, c],
+            rt_ms: rt,
+            success,
+          });
+          // Next target immediately
+          pickTarget();
+          updateStats();
+        }
+
+        function updateStats() {
+          trialCountLab.textContent = attempts.length;
+          const succ = attempts.length
+            ? attempts.filter((a) => a.success).length / attempts.length
+            : 0;
+          succLab.textContent = Math.round(succ * 100) + '%';
+          const rtMed = median(attempts.map((a) => a.rt_ms));
+          rtLab.textContent = isNaN(rtMed) ? '-' : Math.round(rtMed);
+
+          // A_TB (Top vs Bottom), A_LR (Left vs Right) with medians of RT (successful taps only preferred)
+          const ok = attempts.filter((a) => a.success);
+          const set = ok.length ? ok : attempts; // fallback to all attempts if no success yet
+          const top = set
+            .filter((a) => a.target[0] < Math.floor(R / 2))
+            .map((a) => a.rt_ms);
+          const bot = set
+            .filter((a) => a.target[0] >= Math.floor(R / 2))
+            .map((a) => a.rt_ms);
+          const left = set
+            .filter((a) => a.target[1] < Math.floor(C / 2))
+            .map((a) => a.rt_ms);
+          const right = set
+            .filter((a) => a.target[1] >= Math.floor(C / 2))
+            .map((a) => a.rt_ms);
+          const ATB = median(top) - median(bot);
+          const ALR = median(left) - median(right);
+          atbLab.textContent = [ATB].some(isNaN) ? '-' : Math.round(ATB);
+          alrLab.textContent = [ALR].some(isNaN) ? '-' : Math.round(ALR);
+
+          const slope = linSlope(set.map((a) => a.rt_ms));
+          fatigueLab.textContent = isNaN(slope) ? '-' : slope.toFixed(2);
+        }
+
+        function start() {
+          if (running) return;
+          attempts = [];
+          DUR = clamp(parseInt(secondsInput.value || '30', 10), 5, 600);
+          tStart = now();
+          running = true;
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          lockScreen();
+          pickTarget();
+          updateStats();
+          const tick = () => {
+            if (!running) return;
+            const elapsed = (now() - tStart) / 1000;
+            const remain = Math.max(0, DUR - elapsed);
+            timerLab.textContent = fmtTime(remain);
+            if (remain <= 0) {
+              finish();
+              return;
+            }
+            timerId = setTimeout(tick, 100);
+          };
+          tick();
+        }
+
+        function finish() {
+          releaseLock();
+          running = false;
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+          clearTimeout(timerId);
+          $$('.cell', gridEl).forEach((el) => el.classList.remove('target'));
+          saveSession();
+          updateCalendar();
+          loadRecent();
+          alert('세션 저장 완료! 포스터/카드용 지표가 업데이트되었습니다.');
+        }
+
+        function saveSession() {
+          const hand =
+            $('.seg button.active', handSeg)?.dataset.hand || 'right';
+          const dev = deviceInput.value || '';
+          const date = new Date();
+          const yyyy = date.getFullYear();
+          const mm = pad2(date.getMonth() + 1);
+          const dd = pad2(date.getDate());
+          const HH = pad2(date.getHours());
+          const MM = pad2(date.getMinutes());
+          const key = `reachmap_${yyyy}-${mm}-${dd}`;
+
+          // Sums
+          const ok = attempts.filter((a) => a.success);
+          const set = ok.length ? ok : attempts;
+          const succ = attempts.length ? ok.length / attempts.length : 0;
+          const rtMed = median(attempts.map((a) => a.rt_ms));
+          const top = set
+            .filter((a) => a.target[0] < Math.floor(R / 2))
+            .map((a) => a.rt_ms);
+          const bot = set
+            .filter((a) => a.target[0] >= Math.floor(R / 2))
+            .map((a) => a.rt_ms);
+          const left = set
+            .filter((a) => a.target[1] < Math.floor(C / 2))
+            .map((a) => a.rt_ms);
+          const right = set
+            .filter((a) => a.target[1] >= Math.floor(C / 2))
+            .map((a) => a.rt_ms);
+          const ATB = median(top) - median(bot);
+          const ALR = median(left) - median(right);
+          const slope = linSlope(set.map((a) => a.rt_ms));
+
+          const session = {
+            date: `${yyyy}-${mm}-${dd}`,
+            time: `${HH}:${MM}`,
+            hand,
+            device: dev,
+            grid: { rows: R, cols: C },
+            dur_s: DUR,
+            attempts,
+            sums: {
+              success_rate: Number(succ.toFixed(4)),
+              rt_med: Math.round(rtMed || 0),
+              A_TB: Math.round(ATB || 0),
+              A_LR: Math.round(ALR || 0),
+              F: Number((slope || 0).toFixed(3)),
+            },
+          };
+          localStorage.setItem(key, JSON.stringify(session));
+          // Maintain index
+          const idx = JSON.parse(
+            localStorage.getItem('reachmap_index') || '[]'
+          );
+          if (!idx.includes(key)) {
+            idx.push(key);
+            localStorage.setItem('reachmap_index', JSON.stringify(idx));
+          }
+        }
+
+        function updateCalendar() {
+          const cal = $('#calendar');
+          cal.innerHTML = '';
+          const today = new Date();
+          const idx = new Set(
+            JSON.parse(localStorage.getItem('reachmap_index') || '[]')
+          );
+          for (let i = 41; i >= 0; i--) {
+            const d = new Date(
+              today.getFullYear(),
+              today.getMonth(),
+              today.getDate() - i
+            );
+            const k = `reachmap_${d.getFullYear()}-${pad2(
+              d.getMonth() + 1
+            )}-${pad2(d.getDate())}`;
+            const div = document.createElement('div');
+            div.className = 'day' + (idx.has(k) ? ' done' : '');
+            div.title = k;
+            div.textContent = d.getDate();
+            cal.appendChild(div);
+          }
+        }
+
+        function loadRecent() {
+          const tb = $('#recentTbl tbody');
+          tb.innerHTML = '';
+          const idx = JSON.parse(
+            localStorage.getItem('reachmap_index') || '[]'
+          );
+          idx
+            .slice(-10)
+            .reverse()
+            .forEach((key) => {
+              const s = JSON.parse(localStorage.getItem(key));
+              if (!s) return;
+              const tr = document.createElement('tr');
+              const cells = [
+                s.date,
+                s.time,
+                s.hand,
+                s.device || '',
+                (s.sums.success_rate * 100).toFixed(0) + '%',
+                s.sums.rt_med,
+                s.sums.A_TB,
+                s.sums.A_LR,
+                s.sums.F,
+              ];
+              cells.forEach((v) => {
+                const td = document.createElement('td');
+                td.textContent = v;
+                tr.appendChild(td);
+              });
+              tb.appendChild(tr);
+            });
+        }
+
+        function exportCSV(type) {
+          const idx = JSON.parse(
+            localStorage.getItem('reachmap_index') || '[]'
+          );
+          if (idx.length === 0) {
+            alert('내보낼 데이터가 없습니다.');
+            return;
+          }
+          let csv = '';
+          if (type === 'summary') {
+            csv +=
+              'date,time,hand,device,rows,cols,success_rate,rt_med,A_TB,A_LR,F\n';
+            idx.forEach((k) => {
+              const s = JSON.parse(localStorage.getItem(k));
+              if (!s) return;
+              csv +=
+                [
+                  s.date,
+                  s.time,
+                  s.hand,
+                  s.device || '',
+                  s.grid.rows,
+                  s.grid.cols,
+                  s.sums.success_rate.toFixed(4),
+                  s.sums.rt_med,
+                  s.sums.A_TB,
+                  s.sums.A_LR,
+                  s.sums.F,
+                ].join(',') + '\n';
+            });
+          } else {
+            csv +=
+              'date,time,seq,target_r,target_c,hit_r,hit_c,rt_ms,success\n';
+            idx.forEach((k) => {
+              const s = JSON.parse(localStorage.getItem(k));
+              if (!s) return;
+              s.attempts.forEach((a) => {
+                csv +=
+                  [
+                    s.date,
+                    s.time,
+                    a.seq,
+                    a.target[0] + 1,
+                    a.target[1] + 1,
+                    a.hit[0] + 1,
+                    a.hit[1] + 1,
+                    a.rt_ms,
+                    a.success,
+                  ].join(',') + '\n';
+              });
+            });
+          }
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download =
+            type === 'summary'
+              ? 'reachmap_summary.csv'
+              : 'reachmap_attempts.csv';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        }
+
+        function clearAll() {
+          if (!confirm('로컬에 저장된 모든 ReachMap 데이터를 삭제할까요?'))
+            return;
+          Object.keys(localStorage)
+            .filter((k) => k.startsWith('reachmap_'))
+            .forEach((k) => localStorage.removeItem(k));
+          updateCalendar();
+          loadRecent();
+          alert('초기화 완료');
+        }
+
+        function toggleSession() {
+          document.body.classList.toggle('session');
+          if (document.body.classList.contains('session')) {
+            window.scrollTo(0, 0);
+          }
+        }
+
+        // Events
+        gridEl.addEventListener('pointerdown', onGridPointer);
+        startBtn.addEventListener('click', start);
+        stopBtn.addEventListener('click', () => {
+          if (running) finish();
+        });
+        rowsInput.addEventListener('change', buildGrid);
+        colsInput.addEventListener('change', buildGrid);
+        secondsInput.addEventListener('change', () => {
+          DUR = parseInt(secondsInput.value || '30', 10);
+          timerLab.textContent = fmtTime(DUR);
+        });
+        $('#exportSummary').addEventListener('click', () =>
+          exportCSV('summary')
+        );
+        $('#exportAttempts').addEventListener('click', () =>
+          exportCSV('attempts')
+        );
+        $('#clearBtn').addEventListener('click', clearAll);
+        document
+          .getElementById('fullscreenBtn')
+          .addEventListener('click', toggleSession);
+
+        handSeg.addEventListener('click', (e) => {
+          const b = e.target.closest('button');
+          if (!b) return;
+          $$('.seg button', handSeg).forEach((x) =>
+            x.classList.remove('active')
+          );
+          b.classList.add('active');
+        });
+
+        // Init
+        buildGrid();
+        updateCalendar();
+        loadRecent();
+        timerLab.textContent = fmtTime(DUR);
+      })();
+    </script>
+  </body>
+</html>

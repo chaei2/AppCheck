@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>자모 타임라인 • 스크롤/하이라이트/타일링 데모</title>
+    <meta name="theme-color" content="#0f1115" />
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #151924;
+        --ink: #e7ecf3;
+        --muted: #8b95a7;
+        --accent: #73c1ff;
+        --hit: #9ad1ff;
+        --key: #0e121a;
+        --line: #222a3a;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Noto Sans KR, Helvetica, Arial;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      /* 상단 날짜 레일(스크롤해도 붙어있는 헤더) */
+      .rail {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: linear-gradient(#0f1115, #0f1115cc 70%, transparent);
+        padding: 8px 0 10px;
+        backdrop-filter: saturate(1.2) blur(4px);
+      }
+      .rail .chips {
+        display: flex;
+        gap: 8px;
+        overflow: auto;
+        padding-bottom: 6px;
+        scrollbar-width: none;
+      }
+      .rail .chips::-webkit-scrollbar {
+        display: none;
+      }
+      .chip {
+        flex: 0 0 auto;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--muted);
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .chip.active {
+        color: #09111a;
+        background: var(--accent);
+        border-color: transparent;
+      }
+      .progress {
+        height: 3px;
+        background: #1a2232;
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        width: 0%;
+        background: var(--accent);
+      }
+
+      /* 데이 카드 */
+      .day {
+        scroll-margin-top: 92px;
+        margin: 18px 0 24px;
+        padding: 14px;
+        border-radius: 16px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .meta b {
+        color: var(--ink);
+      }
+      .quote {
+        margin: 10px 0 12px;
+        font-size: 18px;
+        line-height: 1.5;
+      }
+      .book {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      /* 미니 자판(32키) */
+      .kbd {
+        display: grid;
+        grid-template-columns: repeat(14, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .row {
+        display: contents;
+      }
+      .key {
+        position: relative;
+        background: var(--key);
+        color: #9aa6bf;
+        border: 1px solid #202636;
+        border-radius: 8px;
+        padding: 8px 0;
+        text-align: center;
+        user-select: none;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .key.space {
+        grid-column: 1 / -1;
+        padding: 14px 0;
+        letter-spacing: 3px;
+      }
+      .key.hit {
+        color: #dff1ff;
+        outline: 2px solid #1c2a3e;
+        box-shadow: 0 0 0 2px rgba(115, 193, 255, 0.2) inset;
+        background: linear-gradient(180deg, #132033, #0e121a);
+      }
+      .key .badge {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        font-size: 10px;
+        color: #09111a;
+        background: var(--hit);
+        border-radius: 8px;
+        padding: 2px 6px;
+        font-weight: 900;
+      }
+
+      /* 갤러리 오버레이 */
+      .sheet {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        z-index: 10;
+      }
+      .sheet.show {
+        display: flex;
+      }
+      .sheet .panel {
+        width: min(960px, 100%);
+        max-height: 86vh;
+        background: #0b0e15;
+        border: 1px solid #223049;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+        padding: 12px;
+        overflow: auto;
+      }
+      .sheet .head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        background: #0b0e15;
+        padding: 4px 0 10px;
+      }
+      .x {
+        border: 0;
+        background: #122031;
+        color: #cfe9ff;
+        border: 1px solid #223049;
+        border-radius: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .tile {
+        width: 100%;
+        aspect-ratio: 1/1;
+        background: #0e121a;
+        border: 1px solid #223049;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .tile img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .ph {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ec9ff;
+        font-weight: 900;
+        font-size: 20px;
+        letter-spacing: 2px;
+        background: repeating-linear-gradient(
+          45deg,
+          #0f1624 0px,
+          #0f1624 10px,
+          #0d1320 10px,
+          #0d1320 20px
+        );
+      }
+
+      @media (max-width: 640px) {
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .quote {
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <!-- 상단 날짜 레일 -->
+      <div class="rail">
+        <div id="chips" class="chips"></div>
+        <div class="progress"><span id="prog"></span></div>
+      </div>
+
+      <!-- 데이 섹션 컨테이너 -->
+      <div id="days"></div>
+    </div>
+
+    <!-- 자모 갤러리 시트 -->
+    <div id="sheet" class="sheet" aria-hidden="true">
+      <div class="panel">
+        <div class="head">
+          <div id="sheetTitle" style="font-weight: 800">자모 타일</div>
+          <button class="x" id="closeSheet">닫기</button>
+        </div>
+        <div id="gallery" class="grid"></div>
+      </div>
+    </div>
+
+    <script>
+      // ===== 1) 데이터(샘플 3일) — 여기에 30일치를 추가하세요. =====
+      // 각 day.photos[자모] = [그 자모와 관련된 사진 경로 배열]
+      const DAYS = [
+        {
+          date: '2025-09-01',
+          time: '21:15',
+          book: '사물의 언어',
+          quote: '사소한 문장 속에서 숨 고르는 법을 배운다.',
+          photos: {
+            ㅅ: ['assets/ㅅ/01.jpg', 'assets/ㅅ/02.jpg'],
+            ㅏ: ['assets/ㅏ/01.jpg'],
+            ㅁ: ['assets/ㅁ/01.jpg'],
+          },
+        },
+        {
+          date: '2025-09-03',
+          time: '22:40',
+          book: '밤의 독서',
+          quote: '깊은 밤, 문장과 문장 사이의 공백이 더 크게 들린다.',
+          photos: {
+            ㅂ: ['assets/ㅂ/01.jpg'],
+            ㅁ: ['assets/ㅁ/02.jpg'],
+            '⎵': ['assets/space/01.jpg'],
+          },
+        },
+        {
+          date: '2025-09-07',
+          time: '19:05',
+          book: '낭독의 기술',
+          quote: '낭독은 호흡이고, 호흡은 의미를 만든다.',
+          photos: {
+            ㅎ: ['assets/ㅎ/01.jpg', 'assets/ㅎ/02.jpg'],
+            ㅗ: ['assets/ㅗ/01.jpg'],
+            ㅢ: ['assets/ㅢ/01.jpg'],
+          },
+        },
+      ];
+
+      // ===== 2) 자판 레이아웃(32키) =====
+      const ROW1 = [
+        'ㅂ',
+        'ㅈ',
+        'ㄷ',
+        'ㄱ',
+        'ㅅ',
+        'ㅁ',
+        'ㄴ',
+        'ㅇ',
+        'ㄹ',
+        'ㅎ',
+        'ㅋ',
+        'ㅌ',
+        'ㅊ',
+        'ㅍ',
+      ];
+      const TENSE = ['ㅃ', 'ㅉ', 'ㄸ', 'ㄲ', 'ㅆ'];
+      const ROW2 = [
+        'ㅛ',
+        'ㅕ',
+        'ㅑ',
+        'ㅐ',
+        'ㅔ',
+        'ㅗ',
+        'ㅓ',
+        'ㅏ',
+        'ㅣ',
+        'ㅠ',
+        'ㅜ',
+        'ㅡ',
+      ];
+      const SPACE = ['⎵'];
+      const KEYSET = new Set([...ROW1, ...TENSE, ...ROW2, ...SPACE]);
+
+      // ===== 3) 한글 분해 → 자모 리스트(된소리/겹받침/겹모음 분해 포함) =====
+      const CHO = [
+        'ㄱ',
+        'ㄲ',
+        'ㄴ',
+        'ㄷ',
+        'ㄸ',
+        'ㄹ',
+        'ㅁ',
+        'ㅂ',
+        'ㅃ',
+        'ㅅ',
+        'ㅆ',
+        'ㅇ',
+        'ㅈ',
+        'ㅉ',
+        'ㅊ',
+        'ㅋ',
+        'ㅌ',
+        'ㅍ',
+        'ㅎ',
+      ];
+      const JUNG = [
+        'ㅏ',
+        'ㅐ',
+        'ㅑ',
+        'ㅒ',
+        'ㅓ',
+        'ㅔ',
+        'ㅕ',
+        'ㅖ',
+        'ㅗ',
+        'ㅘ',
+        'ㅙ',
+        'ㅚ',
+        'ㅛ',
+        'ㅜ',
+        'ㅝ',
+        'ㅞ',
+        'ㅟ',
+        'ㅠ',
+        'ㅡ',
+        'ㅢ',
+        'ㅣ',
+      ];
+      const JONG = [
+        '',
+        'ㄱ',
+        'ㄲ',
+        'ㄳ',
+        'ㄴ',
+        'ㄵ',
+        'ㄶ',
+        'ㄷ',
+        'ㄹ',
+        'ㄺ',
+        'ㄻ',
+        'ㄼ',
+        'ㄽ',
+        'ㄾ',
+        'ㄿ',
+        'ㅀ',
+        'ㅁ',
+        'ㅂ',
+        'ㅄ',
+        'ㅅ',
+        'ㅆ',
+        'ㅇ',
+        'ㅈ',
+        'ㅊ',
+        'ㅋ',
+        'ㅌ',
+        'ㅍ',
+        'ㅎ',
+      ];
+      const JONG_SPLIT = {
+        ㄳ: ['ㄱ', 'ㅅ'],
+        ㄵ: ['ㄴ', 'ㅈ'],
+        ㄶ: ['ㄴ', 'ㅎ'],
+        ㄺ: ['ㄹ', 'ㄱ'],
+        ㄻ: ['ㄹ', 'ㅁ'],
+        ㄼ: ['ㄹ', 'ㅂ'],
+        ㄽ: ['ㄹ', 'ㅅ'],
+        ㄾ: ['ㄹ', 'ㅌ'],
+        ㄿ: ['ㄹ', 'ㅍ'],
+        ㅀ: ['ㄹ', 'ㅎ'],
+        ㅄ: ['ㅂ', 'ㅅ'],
+      };
+      const JUNG_SPLIT = {
+        ㅘ: ['ㅗ', 'ㅏ'],
+        ㅙ: ['ㅗ', 'ㅐ'],
+        ㅚ: ['ㅗ', 'ㅣ'],
+        ㅝ: ['ㅜ', 'ㅓ'],
+        ㅞ: ['ㅜ', 'ㅔ'],
+        ㅟ: ['ㅜ', 'ㅣ'],
+        ㅢ: ['ㅡ', 'ㅣ'],
+        ㅒ: ['ㅑ', 'ㅐ'],
+        ㅖ: ['ㅕ', 'ㅔ'],
+      };
+
+      function decomposeToJamo(text) {
+        const out = [];
+        for (const ch of text) {
+          if (ch === ' ') {
+            out.push('⎵');
+            continue;
+          }
+          const code = ch.charCodeAt(0);
+          if (code < 0xac00 || code > 0xd7a3) {
+            // 한글 음절이 아니면, 그대로 두되 키셋에 있으면 반영
+            if (KEYSET.has(ch)) out.push(ch);
+            continue;
+          }
+          const S = code - 0xac00;
+          const ci = Math.floor(S / (21 * 28));
+          const vi = Math.floor((S % (21 * 28)) / 28);
+          const ti = S % 28;
+          let c = CHO[ci];
+          let v = JUNG[vi];
+          let t = JONG[ti];
+          // 된소리는 그대로(ㅃㅉㄸㄲㅆ)
+          // 겹모음/겹받침 분해하여 키셋(기본 12모음/14자음/된소리5)에 매핑
+          const vs = JUNG_SPLIT[v] || [v];
+          const ts = t ? JONG_SPLIT[t] || [t] : [];
+          // 출력
+          out.push(c, ...vs, ...ts);
+        }
+        // 키보드에 없는 기호 제거
+        return out.filter((j) => KEYSET.has(j));
+      }
+
+      // ===== 4) DOM 빌드 =====
+      const daysEl = document.getElementById('days');
+      const chipsEl = document.getElementById('chips');
+      const progEl = document.getElementById('prog');
+
+      // 데이 섹션 생성
+      DAYS.forEach((d, i) => {
+        const sec = document.createElement('section');
+        sec.className = 'day';
+        sec.dataset.idx = i;
+        sec.innerHTML = `
+        <div class="meta">📅 <b>${d.date}</b> · ⏰ ${d.time} · <span class="book">${d.book}</span></div>
+        <div class="quote">${d.quote}</div>
+        <div class="kbd" aria-label="미니 자판"></div>
+      `;
+        daysEl.appendChild(sec);
+        // 키보드 렌더
+        const used = decomposeToJamo(d.quote);
+        const counts = Object.create(null);
+        used.forEach((k) => (counts[k] = (counts[k] || 0) + 1));
+        const kbd = sec.querySelector('.kbd');
+        buildRow(kbd, ROW1, counts);
+        buildRow(kbd, TENSE, counts, 5);
+        buildRow(kbd, ROW2, counts);
+        buildRow(kbd, SPACE, counts);
+      });
+
+      // 상단 칩스(날짜 버튼)
+      DAYS.forEach((d, i) => {
+        const chip = document.createElement('button');
+        chip.className = 'chip';
+        chip.textContent = `${i + 1}일`;
+        chip.dataset.idx = i;
+        chip.addEventListener('click', () => {
+          document
+            .querySelector(`.day[data-idx="${i}"]`)
+            .scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        chipsEl.appendChild(chip);
+      });
+
+      // 키보드 한 줄 생성
+      function buildRow(kbd, row, counts) {
+        const frag = document.createDocumentFragment();
+        row.forEach((k) => {
+          const div = document.createElement('div');
+          div.className = 'key' + (k === '⎵' ? ' space' : '');
+          div.dataset.k = k;
+          div.textContent = k === '⎵' ? '공백' : k;
+          if (counts[k]) {
+            div.classList.add('hit');
+            const b = document.createElement('span');
+            b.className = 'badge';
+            b.textContent = counts[k];
+            div.appendChild(b);
+          }
+          div.addEventListener('click', (e) => {
+            const dayIdx = e.currentTarget.closest('.day').dataset.idx | 0;
+            openGallery(dayIdx, k);
+          });
+          frag.appendChild(div);
+        });
+        kbd.appendChild(frag);
+      }
+
+      // ===== 5) 스크롤 감지 → 활성 날짜 업데이트 =====
+      const IO = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((en) => {
+            if (en.isIntersecting) {
+              setActive(en.target.dataset.idx | 0);
+            }
+          });
+        },
+        { root: null, rootMargin: '-45% 0px -45% 0px', threshold: 0.01 }
+      );
+
+      document.querySelectorAll('.day').forEach((sec) => IO.observe(sec));
+
+      function setActive(idx) {
+        // 칩 활성화
+        document.querySelectorAll('.chip').forEach((c, i) => {
+          c.classList.toggle('active', i === idx);
+          if (i === idx) {
+            c.scrollIntoView({
+              inline: 'center',
+              behavior: 'smooth',
+              block: 'nearest',
+            });
+          }
+        });
+        // 진행바
+        const p = idx / (DAYS.length - 1 || 1);
+        progEl.style.width = (p * 100).toFixed(1) + '%';
+      }
+
+      // ===== 6) 자모 갤러리(타일링) =====
+      const sheet = document.getElementById('sheet');
+      const closeBtn = document.getElementById('closeSheet');
+      const titleEl = document.getElementById('sheetTitle');
+      const gal = document.getElementById('gallery');
+      closeBtn.addEventListener('click', () => sheet.classList.remove('show'));
+      sheet.addEventListener('click', (e) => {
+        if (e.target === sheet) sheet.classList.remove('show');
+      });
+
+      function openGallery(dayIdx, jamo) {
+        const d = DAYS[dayIdx];
+        const arr =
+          (d.photos && (d.photos[jamo] || d.photos[jamo?.toString()])) || [];
+        titleEl.textContent = `${d.date} · ${
+          jamo === '⎵' ? '공백' : jamo
+        } 사진 모음`;
+        gal.innerHTML = '';
+        if (arr.length === 0) {
+          // 플레이스홀더 6개 생성
+          for (let i = 0; i < 6; i++) {
+            const ph = document.createElement('div');
+            ph.className = 'tile ph';
+            ph.textContent = jamo === '⎵' ? '⎵' : jamo;
+            gal.appendChild(ph);
+          }
+        } else {
+          arr.forEach((src) => {
+            const t = document.createElement('div');
+            t.className = 'tile';
+            const img = document.createElement('img');
+            img.loading = 'lazy';
+            img.src = src;
+            img.alt = `${jamo} 관련 사진`;
+            t.appendChild(img);
+            gal.appendChild(t);
+          });
+        }
+        sheet.classList.add('show');
+      }
+
+      // 초기 활성 상태
+      setActive(0);
+    </script>
+  </body>
+</html>
