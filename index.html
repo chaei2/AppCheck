@@ -489,15 +489,37 @@
           const cell = e.target.closest('.cell');
           if (!cell) return;
 
-          /* [추가] 터치한 위치에 원 표시 */
+          /* [변경] 터치 강도에 따라 링 세기/크기 조절 */
           const rect = gridEl.getBoundingClientRect();
           const ring = document.createElement('span');
           ring.className = 'tap-ring';
+
+          // 강도 p 계산: 1) PointerEvent.pressure(0~1) → 2) 접촉면적(width*height) → 3) 기본값 0.5
+          const hasPressure = typeof e.pressure === 'number' && e.pressure > 0;
+          let p = hasPressure ? e.pressure : 0;
+          if (!hasPressure) {
+            const area = e.width && e.height ? e.width * e.height : 0; // CSS px^2
+            // S21 Ultra 기준 대략 40~900 범위를 0.1~1로 정규화
+            const norm = (area - 40) / (900 - 40);
+            p = Math.max(0.1, Math.min(1, isFinite(norm) ? norm : 0.5));
+          }
+
+          // 강도에 따른 스타일 매핑
+          const size = Math.round(22 + 18 * p); // 22~40px
+          const bw = Math.round(1 + 3 * p); // 1~4px
+          const op = (0.35 + 0.65 * p).toFixed(2); // 0.35~1.0
+
+          ring.style.width = size + 'px';
+          ring.style.height = size + 'px';
+          ring.style.borderWidth = bw + 'px';
+          ring.style.opacity = op;
+
           ring.style.left = e.clientX - rect.left + 'px';
           ring.style.top = e.clientY - rect.top + 'px';
+
           gridEl.appendChild(ring);
           setTimeout(() => ring.remove(), 650);
-          /* [추가 끝] */
+          /* [변경 끝] */
 
           const r = parseInt(cell.dataset.r, 10);
           const c = parseInt(cell.dataset.c, 10);
