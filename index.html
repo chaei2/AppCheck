@@ -9,6 +9,34 @@
     <title>Thumb Reach Map • 4×6 • 30초</title>
     <meta name="theme-color" content="#111" />
     <style>
+      /* Tap ring (touch indicator) */
+      .grid {
+        position: relative;
+      } /* 링 위치 계산을 위해 */
+      .tap-ring {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 28px;
+        height: 28px;
+        border: 2px solid var(--brand);
+        border-radius: 50%;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        opacity: 0.9;
+        animation: tap-ring 600ms ease-out forwards;
+      }
+      @keyframes tap-ring {
+        0% {
+          transform: translate(-50%, -50%) scale(0.6);
+          opacity: 1;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1.4);
+          opacity: 0;
+        }
+      }
+
       :root {
         --bg: #0f1115;
         --card: #151924;
@@ -460,6 +488,17 @@
           if (!running) return;
           const cell = e.target.closest('.cell');
           if (!cell) return;
+
+          /* [추가] 터치한 위치에 원 표시 */
+          const rect = gridEl.getBoundingClientRect();
+          const ring = document.createElement('span');
+          ring.className = 'tap-ring';
+          ring.style.left = e.clientX - rect.left + 'px';
+          ring.style.top = e.clientY - rect.top + 'px';
+          gridEl.appendChild(ring);
+          setTimeout(() => ring.remove(), 650);
+          /* [추가 끝] */
+
           const r = parseInt(cell.dataset.r, 10);
           const c = parseInt(cell.dataset.c, 10);
           const rt = Math.max(0, Math.round(now() - trialStart));
